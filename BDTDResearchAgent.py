@@ -7,8 +7,8 @@ import requests
 from bs4 import BeautifulSoup
 
 # Imports dos módulos fornecidos
-from bdtdfinder import BDTDCrawler
-from bdtddownloader import PDFDownloader
+from BDTDfinder import BDTDCrawler
+from BDTDdownloader import PDFDownloader
 
 class BDTDAgent:
     """

@@ -1,76 +1,96 @@
 import os
-import logging
-import argparse
+import csv
 import json
-from typing import Optional, List, Dict
-from dataclasses import dataclass
-import pandas as pd
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import KMeans
-from sklearn.metrics.pairwise import cosine_similarity
-import matplotlib.pyplot as plt
-import seaborn as sns
-from concurrent.futures import ThreadPoolExecutor
+import datetime
+import argparse
+from typing import List, Dict, Optional
+import requests
 from datetime import datetime
-from collections import Counter
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from textblob import TextBlob
 
-# Constantes dos prompts de sistema
-SYSTEM_PROMPT_REVIEWER = """
-<role>
-    You are a researcher specialized in systematic literature reviews about {theme}. 
-    Your task is to analyze all articles provided by the user, extracting and synthesizing 
-    relevant information for the theme "{theme}".
-</role>
+# Imports dos módulos existentes
+from BDTDfinder import BDTDCrawler
+from BDTDdownloader import PDFDownloader
+from BDTDResearchAgent import BDTDAgent
 
-<important>
-    - Use ALL content from the provided articles. Do not ignore any relevant information.
-    - Read and process all provided articles carefully and extract relevant information.
-    - Identify connections with the theme "{theme}".
-    - Extract relevant evidence, methods, and results.
-    - Synthesize findings while maintaining focus on the theme.
-    - Write a comprehensive literature review with near 4000 words about the theme "{theme}".
-</important>
-
-<guidelines>
-    "Analysis": [
-        Theoretical frameworks,
-        Methods used,
-        Empirical evidence,
-        Patterns and trends,
-        Identified gaps,
-        Relationship between papers and theme
-    ]
+class BDTDReviewer:
+    """
+    Classe responsável por realizar revisões sistemáticas de literatura baseadas em
+    teses e dissertações da BDTD (Biblioteca Digital Brasileira de Teses e Dissertações).
     
-    "Structure": [
-        Summary,
-        Methodology,
-        Results,
-        Discussion,
-        Conclusion
-    ]
-</guidelines>
-
-<output>
-    - Literature Review
-    - Methodology
-    - Results
-    - References
-</output>
-"""
-
-SYSTEM_PROMPT_EXTRACTOR = """You are tasked with extracting metadata from academic thesis/dissertation repository text and structuring it into a standardized JSON format. The input will be a long string containing webpage content from academic repositories.
+    A classe integra as funcionalidades de busca, download e análise de textos,
+    utilizando agentes de IA para gerar uma revisão de literatura estruturada.
+    
+    Attributes:
+        theme (str): Tema da revisão sistemática
+        output_lang (str): Idioma de saída da revisão (default: pt-BR)
+        max_pages (int): Número máximo de páginas para busca
+        max_title_review (int): Número máximo de títulos para revisão
+        download_pdfs (bool): Flag para realizar download dos PDFs
+        scrape_text (bool): Flag para extrair texto das páginas
+        output_dir (str): Diretório para arquivos de saída
+        debug (bool): Flag para modo debug
+        openrouter_api_key (str): Chave API do OpenRouter
+    """
+    
+    def __init__(
+        self,
+        theme: str,
+        output_lang: str = "pt-BR",
+        max_pages: int = 50,
+        max_title_review: int = 5,
+        download_pdfs: bool = False,
+        scrape_text: bool = True,
+        output_dir: str = "output",
+        debug: bool = False,
+        openrouter_api_key: Optional[str] = None
+    ):
+        """
+        Inicializa o BDTDReviewer com os parâmetros fornecidos.
+        
+        Args:
+            theme: Tema da revisão sistemática
+            output_lang: Idioma de saída (default: pt-BR)
+            max_pages: Limite de páginas para busca (default: 50)
+            max_title_review: Limite de títulos para revisão (default: 5)
+            download_pdfs: Se True, baixa PDFs encontrados (default: False)
+            scrape_text: Se True, extrai texto das páginas (default: True)
+            output_dir: Diretório de saída (default: "output")
+            debug: Modo debug (default: False)
+            openrouter_api_key: Chave API do OpenRouter (opcional)
+        """
+        self.theme = theme
+        self.output_lang = output_lang
+        self.max_pages = max_pages
+        self.max_title_review = max_title_review
+        self.download_pdfs = download_pdfs
+        self.scrape_text = scrape_text
+        self.output_dir = output_dir
+        self.debug = debug
+        
+        # Configuração do OpenRouter
+        self.openrouter_api_key = openrouter_api_key or os.getenv("OPENROUTER_API_KEY")
+        if not self.openrouter_api_key:
+            raise ValueError("OpenRouter API key é necessária")
+            
+        # Modelos disponíveis ordenados por preferência
+        self.available_models = [
+            "google/gemini-2.0-pro-exp-02-05:free",
+            "anthropic/claude-3.5-sonnet",
+            "openai/chatgpt-4o-latest",
+            "google/gemini-2.0-flash-thinking-exp:free",
+            "cognitivecomputations/dolphin3.0-mistral-24b:free"
+        ]
+        
+        # Prompts do sistema
+        self.SYSTEM_PROMPT_EXTRACTOR = """You are tasked with extracting metadata from academic thesis/dissertation repository text and structuring it into a standardized JSON format. The input will be a long string containing webpage content from academic repositories.
 
 Expected JSON structure:
 {
   "title": <string>,
   "abstract": <string>,
   "author": <string>,
-  "date": <string>
+  "date": <string>,
+  "format": <string>
 }
 
 Look for these common identifiers in the text:
@@ -78,435 +98,204 @@ Look for these common identifiers in the text:
 - Date/Year: "Data de defesa", "Date", "Ano"
 - Author: "Autor", "Author", "Nome completo"
 - Abstract: "Resumo", "Abstract"
+- Format: "tese","dissertação","artigo","masterThesis", "doctoralThesis", "Article"
+
 
 When information is not found, use "Not informed" as default value.
 Maintain the original language for abstract and other text."""
 
-# Imports dos módulos existentes
-from bdtdfinder import BDTDCrawler
-from bdtddownloader import PDFDownloader
-from BDTDResearchAgent import BDTDAgent
+        self.SYSTEM_PROMPT_REVIEWER = f"""You are a researcher specialized in systematic literature reviews about {theme}. 
+Your task is to analyze all articles provided by the user, extracting and synthesizing 
+relevant information for the theme "{theme}".
 
-# Download recursos NLTK necessários
-try:
-    nltk.download('punkt')
-    nltk.download('stopwords')
-    nltk.download('averaged_perceptron_tagger')
-except Exception as e:
-    print(f"Erro ao baixar recursos NLTK: {e}")
+IMPORTANT: Write the entire review in {self.output_lang} language and respect {format} in comments.
 
-# Configuração de logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.FileHandler("bdtd_reviewer.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+Use ALL content from the provided articles. Do not ignore any relevant information.
+Read and process all provided articles carefully and extract relevant information.
+Identify connections with the theme "{theme}".
+Extract relevant evidence, methods, and results.
+Synthesize findings while maintaining focus on the theme.
+Write a comprehensive literature review with near 4000 words about the theme "{theme}".
 
-@dataclass
-class ReviewMetrics:
-    """Classe para armazenar métricas da revisão sistemática."""
-    total_documents: int
-    temporal_range: Dict[str, str]
-    quality_score: float
-    sentiment_score: float
-    top_keywords: List[str]
-    cluster_info: Dict[str, List[str]]
+Analysis should include:
+- Theoretical frameworks
+- Methods used
+- Empirical evidence
+- Patterns and trends
+- Identified gaps
+- Relationship between papers and theme
 
-class EnhancedBDTDReviewer:
-    """
-    Versão aprimorada do BDTDReviewer que integra análise avançada e visualização.
-    
-    Funcionalidades:
-    1. Integração com BDTDAgent para busca e download
-    2. Análise estatística avançada
-    3. Processamento de linguagem natural
-    4. Visualizações interativas
-    5. Métricas de qualidade
-    """
-    
-    def __init__(
-        self,
-        theme: str,
-        api_provider,
-        max_pages: int = 50,
-        download_pdfs: bool = False,
-        output_dir: str = "output"
-    ):
+Structure should have:
+- Summary
+- Methodology
+- Results
+- Discussion
+- Conclusion
+
+Required sections:
+- Literature Review
+- Methodology
+- Results
+- References
+
+Remember: The entire review must be written in {self.output_lang} language."""
+
+    def _call_openrouter(self, prompt: str, system_prompt: str) -> str:
         """
-        Inicializa o revisor aprimorado.
+        Realiza chamada à API do OpenRouter.
         
         Args:
-            theme (str): Tema da revisão
-            api_provider: Provedor de API para geração de conteúdo
-            max_pages (int): Limite de páginas para busca
-            download_pdfs (bool): Se deve baixar PDFs
-            output_dir (str): Diretório de saída
+            prompt: Prompt para o modelo
+            system_prompt: Prompt do sistema
+            
+        Returns:
+            str: Resposta do modelo
+            
+        Raises:
+            Exception: Se houver erro na chamada à API
         """
-        self.theme = theme
-        self.api_provider = api_provider
-        self.max_pages = max_pages
-        self.download_pdfs = download_pdfs
-        self.output_dir = output_dir
+        headers = {
+            "Authorization": f"Bearer {self.openrouter_api_key}",
+            "HTTP-Referer": "http://localhost:8080",
+            "Content-Type": "application/json"
+        }
         
-        # Inicializa componentes de análise
+        # Tenta cada modelo em ordem até um funcionar
+        for model in self.available_models:
+            try:
+                response = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": prompt}
+                        ]
+                    }
+                )
+                response.raise_for_status()
+                return response.json()["choices"][0]["message"]["content"]
+            except Exception as e:
+                if self.debug:
+                    print(f"Erro com modelo {model}: {e}")
+                continue
+                
+        raise Exception("Nenhum modelo disponível respondeu corretamente")
+
+    def _extract_metadata(self, text: str) -> Dict:
+        """
+        Extrai metadados do texto usando o agente extrator.
+        
+        Args:
+            text: Texto para extração
+            
+        Returns:
+            Dict: Metadados extraídos
+        """
         try:
-            self.vectorizer = TfidfVectorizer(
-                stop_words='portuguese',
-                max_features=1000,  # Limit features to prevent memory issues
-                min_df=2  # Minimum document frequency
-            )
+            response = self._call_openrouter(text, self.SYSTEM_PROMPT_EXTRACTOR)
+            return json.loads(response)
         except Exception as e:
-            logger.error(f"Error initializing TfidfVectorizer: {e}")
-            raise
-            
-        self.metrics = None
-        
-        # Create output directory with parents if needed
-        os.makedirs(output_dir, exist_ok=True)
-        logger.info(f"Initialized reviewer for theme: {theme}")
-        logger.debug(f"Configuration: max_pages={max_pages}, download_pdfs={download_pdfs}")
-    
-    def search_and_download(self) -> bool:
+            if self.debug:
+                print(f"Erro na extração de metadados: {e}")
+            return {
+                "title": "Not informed",
+                "abstract": "Not informed",
+                "author": "Not informed",
+                "date": "Not informed"
+            }
+
+    def _generate_review(self, texts: List[Dict]) -> str:
         """
-        Executa busca e download usando BDTDAgent.
+        Gera a revisão de literatura usando o agente revisor.
+        
+        Args:
+            texts: Lista de dicionários com metadados extraídos
+            
+        Returns:
+            str: Texto da revisão de literatura
+        """
+        # Formata os textos para o prompt
+        formatted_texts = "\n\n".join([
+            f"Title: {t['title']}\nAuthor: {t['author']}\n Format: {t['format']} \nDate: {t['date']}\nAbstract: {t['abstract']}"
+            for t in texts
+        ])
+        
+        try:
+            return self._call_openrouter(formatted_texts, self.SYSTEM_PROMPT_REVIEWER)
+        except Exception as e:
+            raise Exception(f"Erro ao gerar revisão: {e}")
+
+    def run(self) -> str:
+        """
+        Executa o processo completo de revisão sistemática.
+        
+        Returns:
+            str: Caminho do arquivo markdown com a revisão
+            
+        Raises:
+            Exception: Se houver erro em qualquer etapa do processo
         """
         try:
-            # Create output directory first
-            os.makedirs(self.output_dir, exist_ok=True)
-            
+            # 1. Executa o BDTDAgent
             agent = BDTDAgent(
                 subject=self.theme,
                 max_pages_limit=self.max_pages,
                 download_pdf=self.download_pdfs
             )
-            
-            # Set output directory for the agent
-            agent.output_dir = self.output_dir
-            
-            # Set scrape_text attribute
-            agent.scrape_text = True
-            
-            logger.info(f"Starting agent with theme: {self.theme}")
+            agent.scrape_text = self.scrape_text
             agent.run()
             
-            # Verify if results files were created
-            expected_files = [
-                os.path.join(self.output_dir, "results.csv"),
-                os.path.join(self.output_dir, "results_filtered.csv"),
-                os.path.join(self.output_dir, "results_page.csv")
-            ]
+            # 2. Lê o CSV com os textos extraídos
+            results_file = os.path.join(self.output_dir, "results_page.csv")
+            texts = []
+            with open(results_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if len(texts) >= self.max_title_review:
+                        break
+                    metadata = self._extract_metadata(row['results'])
+                    texts.append(metadata)
             
-            for file_path in expected_files:
-                if not os.path.exists(file_path):
-                    logger.error(f"Expected file not found: {file_path}")
-                    return False
+            # 3. Gera a revisão de literatura
+            review_text = self._generate_review(texts)
             
-            logger.info("All expected files were created successfully")
-            return True
+            # 4. Salva o resultado
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            output_file = os.path.join(
+                self.output_dir,
+                f"literature_review_{timestamp}.md"
+            )
+            
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(review_text)
+            
+            return output_file
             
         except Exception as e:
-            logger.error(f"Error during search and download: {e}", exc_info=True)
-            return False
-    
-    def extract_keywords(self, text: str, n: int = 10) -> List[str]:
-        """
-        Extrai palavras-chave do texto usando TF-IDF.
-        
-        Args:
-            text (str): Texto para análise
-            n (int): Número de palavras-chave
-            
-        Returns:
-            List[str]: Lista de palavras-chave
-        """
-        try:
-            # Tokenização e remoção de stopwords
-            tokens = word_tokenize(text.lower())
-            stop_words = set(stopwords.words('portuguese'))
-            tokens = [t for t in tokens if t.isalnum() and t not in stop_words]
-            
-            # Contagem de frequência
-            freq = Counter(tokens)
-            return [word for word, _ in freq.most_common(n)]
-        except Exception as e:
-            logger.error(f"Erro na extração de palavras-chave: {e}")
-            return []
-    
-    def analyze_sentiment(self, text: str) -> float:
-        """
-        Analisa o sentimento do texto.
-        
-        Args:
-            text (str): Texto para análise
-            
-        Returns:
-            float: Score de sentimento (-1 a 1)
-        """
-        try:
-            blob = TextBlob(text)
-            return blob.sentiment.polarity
-        except Exception as e:
-            logger.error(f"Erro na análise de sentimento: {e}")
-            return 0.0
-    
-    def cluster_documents(self, texts: List[str], n_clusters: int = 5) -> Dict:
-        """
-        Agrupa documentos em clusters temáticos.
-        
-        Args:
-            texts (List[str]): Lista de textos
-            n_clusters (int): Número de clusters
-            
-        Returns:
-            Dict: Informações dos clusters
-        """
-        try:
-            # Vetorização TF-IDF
-            tfidf_matrix = self.vectorizer.fit_transform(texts)
-            
-            # Clustering
-            kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-            clusters = kmeans.fit_predict(tfidf_matrix)
-            
-            # Extrai termos mais relevantes por cluster
-            cluster_terms = {}
-            feature_names = self.vectorizer.get_feature_names_out()
-            
-            for i in range(n_clusters):
-                cluster_docs = tfidf_matrix[clusters == i]
-                if cluster_docs.shape[0] > 0:
-                    centroid = cluster_docs.mean(axis=0).A1
-                    top_indices = centroid.argsort()[-5:][::-1]
-                    cluster_terms[f"cluster_{i}"] = [
-                        feature_names[idx] for idx in top_indices
-                    ]
-            
-            return cluster_terms
-        except Exception as e:
-            logger.error(f"Erro no clustering: {e}")
-            return {}
-    
-    def parse_date(self, date_str: str) -> Optional[datetime]:
-        """Helper function to parse dates with multiple formats."""
-        if not date_str or date_str == "Not informed":
-            return None
-            
-        date_formats = [
-            "%Y-%m-%d",
-            "%d/%m/%Y",
-            "%Y/%m/%d",
-            "%d-%m-%Y",
-            "%Y"
-        ]
-        
-        for fmt in date_formats:
-            try:
-                return datetime.strptime(date_str, fmt)
-            except ValueError:
-                continue
-        return None
+            raise Exception(f"Erro no processo de revisão: {e}")
 
-    def calculate_metrics(self, texts: List[str], dates: List[str]) -> ReviewMetrics:
-        """
-        Calcula métricas da revisão com melhor tratamento de erros.
-        """
-        try:
-            if not texts:
-                logger.error("No texts provided for analysis")
-                raise ValueError("Empty text list")
-
-            # Parse dates with better error handling
-            parsed_dates = []
-            for date in dates:
-                parsed_date = self.parse_date(date)
-                if parsed_date:
-                    parsed_dates.append(parsed_date)
-            
-            temporal_range = {
-                "start": min(parsed_dates).strftime("%Y-%m-%d") if parsed_dates else "N/A",
-                "end": max(parsed_dates).strftime("%Y-%m-%d") if parsed_dates else "N/A"
-            }
-            
-            # Concatenate texts with length validation
-            valid_texts = [text for text in texts if isinstance(text, str) and text.strip()]
-            if not valid_texts:
-                logger.error("No valid texts found after filtering")
-                raise ValueError("No valid texts for analysis")
-                
-            full_text = " ".join(valid_texts)
-            
-            # Calculate metrics with proper validation
-            metrics = ReviewMetrics(
-                total_documents=len(valid_texts),
-                temporal_range=temporal_range,
-                quality_score=len(valid_texts) / self.max_pages,
-                sentiment_score=self.analyze_sentiment(full_text),
-                top_keywords=self.extract_keywords(full_text),
-                cluster_info=self.cluster_documents(valid_texts, n_clusters=min(5, len(valid_texts)))
-            )
-            
-            logger.info(f"Successfully calculated metrics for {len(valid_texts)} documents")
-            logger.debug(f"Metrics: {metrics}")
-            
-            return metrics
-            
-        except Exception as e:
-            logger.error(f"Error calculating metrics: {e}", exc_info=True)
-            # Return default metrics instead of None
-            return ReviewMetrics(
-                total_documents=0,
-                temporal_range={"start": "N/A", "end": "N/A"},
-                quality_score=0.0,
-                sentiment_score=0.0,
-                top_keywords=[],
-                cluster_info={}
-            )
+def parse_args():
+    """
+    Processa argumentos da linha de comando.
     
-    def generate_visualizations(self):
-        """Gera visualizações dos dados analisados."""
-        try:
-            if not self.metrics:
-                return
-            
-            # Timeline plot
-            plt.figure(figsize=(12, 6))
-            dates = [
-                datetime.strptime(d, "%Y-%m-%d") 
-                for d in [self.metrics.temporal_range["start"], self.metrics.temporal_range["end"]]
-                if d != "N/A"
-            ]
-            if dates:
-                plt.hist(dates, bins=20)
-                plt.title("Distribuição Temporal das Publicações")
-                plt.xlabel("Data")
-                plt.ylabel("Quantidade")
-                plt.savefig(os.path.join(self.output_dir, "temporal_distribution.png"))
-            
-            # Cluster visualization
-            if self.metrics.cluster_info:
-                plt.figure(figsize=(10, 10))
-                cluster_data = pd.DataFrame.from_dict(
-                    self.metrics.cluster_info, 
-                    orient='index'
-                )
-                sns.heatmap(
-                    cluster_data.notnull(), 
-                    cmap='YlOrRd',
-                    cbar_kws={'label': 'Presença de Termos'}
-                )
-                plt.title("Distribuição de Termos por Cluster")
-                plt.savefig(os.path.join(self.output_dir, "cluster_heatmap.png"))
-            
-        except Exception as e:
-            logger.error(f"Erro na geração de visualizações: {e}")
-    
-    def run(self) -> Optional[str]:
-        """
-        Executa o processo completo de revisão.
-        
-        Returns:
-            Optional[str]: Texto da revisão gerada ou None em caso de erro
-        """
-        try:
-            logger.info(f"Starting review process for theme: {self.theme}")
-            
-            # Execute search and download
-            if not self.search_and_download():
-                logger.error("Failed to search and download content")
-                return None
-            
-            # Read CSV data with validation
-            results_page_csv = os.path.join(self.output_dir, "results_page.csv")
-            if not os.path.exists(results_page_csv):
-                logger.error(f"Results file not found: {results_page_csv}")
-                return None
-            
-            try:
-                df = pd.read_csv(results_page_csv)
-                logger.info(f"Successfully loaded {len(df)} records from CSV")
-            except Exception as e:
-                logger.error(f"Error reading CSV file: {e}")
-                return None
-            
-            # Validate DataFrame content
-            if df.empty:
-                logger.error("Empty DataFrame loaded from CSV")
-                return None
-            
-            if 'results' not in df.columns:
-                logger.error("Required 'results' column not found in CSV")
-                return None
-            
-            # Calculate metrics with proper data validation
-            self.metrics = self.calculate_metrics(
-                texts=df["results"].fillna("").tolist(),
-                dates=df.get("date", ["Not informed"] * len(df)).fillna("Not informed").tolist()
-            )
-            
-            if not self.metrics:
-                logger.error("Failed to calculate metrics")
-                return None
-            
-            # Generate visualizations with error handling
-            try:
-                self.generate_visualizations()
-            except Exception as e:
-                logger.error(f"Error generating visualizations: {e}")
-                # Continue execution even if visualizations fail
-            
-            # Gera revisão usando a API
-            system_prompt = SYSTEM_PROMPT_REVIEWER.replace("{theme}", self.theme)
-            user_prompt = f"""
-            Tema: {self.theme}
-            
-            Métricas da Revisão:
-            - Total de documentos: {self.metrics.total_documents}
-            - Período: {self.metrics.temporal_range['start']} a {self.metrics.temporal_range['end']}
-            - Score de qualidade: {self.metrics.quality_score:.2f}
-            - Sentimento geral: {self.metrics.sentiment_score:.2f}
-            
-            Palavras-chave principais:
-            {', '.join(self.metrics.top_keywords)}
-            
-            Clusters temáticos:
-            {json.dumps(self.metrics.cluster_info, indent=2)}
-            
-            Documentos analisados:
-            {df['results'].str.cat(sep='\n\n')}
-            """
-            
-            literature_review = self.api_provider.generate_content(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                temperature=0.0
-            )
-            
-            # Salva revisão
-            output_file = os.path.join(self.output_dir, "literature_review.txt")
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(literature_review)
-            
-            logger.info("Review process completed successfully")
-            return literature_review
-            
-        except Exception as e:
-            logger.error(f"Error during review process: {e}", exc_info=True)
-            return None
-
-def parse_arguments():
-    """Parse argumentos da linha de comando."""
+    Returns:
+        argparse.Namespace: Argumentos processados
+    """
     parser = argparse.ArgumentParser(
-        description="Gerador de revisão sistemática de literatura da BDTD"
+        description="Gerador de revisões sistemáticas da BDTD"
     )
     parser.add_argument(
         "theme",
         type=str,
         help="Tema da revisão sistemática"
+    )
+    parser.add_argument(
+        "--output-lang",
+        type=str,
+        default="pt-BR",
+        help="Língua de retorno da revisão (default: pt-BR)"
     )
     parser.add_argument(
         "--max-pages",
@@ -515,144 +304,60 @@ def parse_arguments():
         help="Número máximo de páginas para busca (default: 50)"
     )
     parser.add_argument(
+        "--max-title-review",
+        type=int,
+        default=5,
+        help="Número máximo de títulos para revisão (default: 5)"
+    )
+    parser.add_argument(
         "--download-pdfs",
         action="store_true",
         help="Realizar download dos PDFs encontrados"
     )
     parser.add_argument(
+        "--scrape-text",
+        action="store_true",
+        help="Extrair texto das páginas"
+    )
+    parser.add_argument(
         "--output-dir",
         type=str,
         default="output",
-        help="Diretório para saída dos arquivos (default: output)"
+        help="Diretório para saída (default: output)"
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Ativar modo debug"
+    )
+    
     return parser.parse_args()
-
-# Continuação do arquivo anterior...
 
 def main():
     """
-    Função principal do programa.
-    
-    Fluxo de execução:
-    1. Parse dos argumentos da linha de comando
-    2. Inicialização do revisor
-    3. Execução da revisão
-    4. Geração de relatório de resultados
+    Função principal para execução via linha de comando.
     """
-    args = parse_arguments()
-    
-    # Configuração do logger para o arquivo de execução
-    execution_log = os.path.join(args.output_dir, "execution.log")
-    file_handler = logging.FileHandler(execution_log)
-    file_handler.setFormatter(logging.Formatter(
-        '[%(asctime)s] %(levelname)s: %(message)s'
-    ))
-    logger.addHandler(file_handler)
-    
-    logger.info(f"Iniciando revisão sistemática sobre: {args.theme}")
-    logger.info(f"Configurações: max_pages={args.max_pages}, download_pdfs={args.download_pdfs}")
-    
-    # Mock API Provider para exemplo
-    class MockAPIProvider:
-        def generate_content(self, system_prompt: str, user_prompt: str, temperature: float) -> str:
-            """
-            Simula a geração de conteúdo para exemplo.
-            Na implementação real, este seria substituído pelo provedor real da API.
-            
-            Args:
-                system_prompt (str): Prompt do sistema
-                user_prompt (str): Prompt do usuário
-                temperature (float): Temperatura para geração
-            
-            Returns:
-                str: Conteúdo gerado
-            """
-            return f"""
-            # Revisão Sistemática: {args.theme}
-            
-            ## Introdução
-            Esta revisão sistemática aborda o tema "{args.theme}" através da análise 
-            da literatura disponível na Base Digital de Teses e Dissertações (BDTD).
-            
-            ## Metodologia
-            A busca foi realizada utilizando critérios específicos, incluindo...
-            
-            ## Resultados
-            Os principais achados desta revisão incluem...
-            
-            ## Conclusão
-            Com base na análise realizada, podemos concluir que...
-            """
+    args = parse_args()
     
     try:
-        # Inicializa o revisor com as configurações
-        reviewer = EnhancedBDTDReviewer(
+        reviewer = BDTDReviewer(
             theme=args.theme,
-            api_provider=MockAPIProvider(),
+            output_lang=args.output_lang,
             max_pages=args.max_pages,
+            max_title_review=args.max_title_review,
             download_pdfs=args.download_pdfs,
-            output_dir=args.output_dir
+            scrape_text=args.scrape_text,
+            output_dir=args.output_dir,
+            debug=args.debug
         )
         
-        # Executa a revisão
-        review_text = reviewer.run()
+        output_file = reviewer.run()
+        print(f"\nRevisão de literatura salva em: {output_file}")
         
-        if review_text:
-            # Gera relatório de execução
-            report_path = os.path.join(args.output_dir, "execution_report.txt")
-            with open(report_path, "w", encoding="utf-8") as f:
-                f.write(f"""
-                Relatório de Execução - Revisão Sistemática
-                ==========================================
-                
-                Tema: {args.theme}
-                Data de execução: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-                
-                Configurações
-                ------------
-                - Máximo de páginas: {args.max_pages}
-                - Download de PDFs: {args.download_pdfs}
-                - Diretório de saída: {args.output_dir}
-                
-                Métricas da Revisão
-                ------------------
-                - Total de documentos: {reviewer.metrics.total_documents}
-                - Período: {reviewer.metrics.temporal_range['start']} a {reviewer.metrics.temporal_range['end']}
-                - Score de qualidade: {reviewer.metrics.quality_score:.2f}
-                - Sentimento geral: {reviewer.metrics.sentiment_score:.2f}
-                
-                Palavras-chave principais
-                -----------------------
-                {', '.join(reviewer.metrics.top_keywords)}
-                
-                Clusters Temáticos
-                ----------------
-                {json.dumps(reviewer.metrics.cluster_info, indent=2)}
-                
-                Arquivos Gerados
-                --------------
-                - Revisão: literature_review.txt
-                - Visualizações: temporal_distribution.png, cluster_heatmap.png
-                - Logs: execution.log
-                """)
-            
-            logger.info(f"Revisão concluída com sucesso. Relatório salvo em {report_path}")
-            print(f"\nRevisão concluída com sucesso!")
-            print(f"Arquivos gerados no diretório: {args.output_dir}")
-            print(f"Para mais detalhes, consulte o relatório: {report_path}")
-            
-        else:
-            logger.error("Falha na geração da revisão")
-            print("\nErro: Falha na geração da revisão. Verifique os logs para mais detalhes.")
-            return 1
-            
     except Exception as e:
-        logger.error(f"Erro durante execução: {e}")
-        print(f"\nErro durante execução: {e}")
-        print("Verifique os logs para mais detalhes.")
-        return 1
-    
-    return 0
+        print(f"\nErro: {e}")
+        if args.debug:
+            raise
 
 if __name__ == "__main__":
-    exit(main())
+    main()
