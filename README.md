@@ -1,148 +1,245 @@
+Below is an improved README that includes accurate and detailed information about the core class **BDTDReviewer** and its interactions with the other components:
+
+---
+
 # BDTD Research Agent & Reviewer
 
-A Python library for automated research and systematic literature review using Brazil's Digital Library of Theses and Dissertations (BDTD).
+A Python library for automated research and systematic literature reviews using Brazil's Digital Library of Theses and Dissertations (BDTD).
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Configuration: OpenRouter API](#configuration-openrouter-api)
+- [Usage](#usage)
+  - [Systematic Review Example](#systematic-review-example)
+- [Output Structure](#output-structure)
+- [Core Components](#core-components)
+  - [BDTDReviewer (Core Class)](#bdtdreviewer-core-class)
+  - [BDTDCrawler](#bdtdcrawler)
+  - [BDTDAgent](#bdtdagent)
+  - [PDFDownloader](#pdfdownloader)
+- [Dependencies](#dependencies)
+- [Running the Test Script](#running-the-test-script)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Overview
+
+This library streamlines the process of conducting systematic literature reviews on academic content from Brazil’s Digital Library of Theses and Dissertations (BDTD). It automatically searches, filters, downloads, and analyzes academic documents, then leverages the OpenRouter API with state-of-the-art large language models (LLMs) to generate comprehensive literature reviews.
+
+---
 
 ## Features
 
-- **Automated Search**: Intelligent crawling of BDTD's database
-- **Content Analysis**: Natural Language Processing for content extraction and analysis
-- **PDF Management**: Automatic download and organization of PDFs
-- **Systematic Review**: Generation of literature reviews using advanced text analysis
+- **Automated Search & Crawling:** Intelligent multi-page crawling of the BDTD database.
+- **Content Analysis:** Extract metadata and plain text from academic webpages.
+- **PDF Management:** Automated download, validation, and organization of PDFs.
+- **Systematic Review Generation:** Generate detailed, evidence-based literature reviews using LLMs.
+- **Configurable Output:** Fully configurable output directory to store all results.
+
+---
 
 ## Installation
+
+Clone the repository and install the package:
 
 ```bash
 # Clone the repository
 git clone https://github.com/evandeilton/bdtdfinder.git
 cd bdtdfinder
 
-# Install the package
+# Install the package and its dependencies
 pip install .
 ```
 
-The dependencies will be automatically installed when you install the package.
+All necessary dependencies will be installed automatically.
 
-## OpenRouter API
+---
 
-This library uses the OpenRouter API to generate literature reviews. OpenRouter is a service that allows you to access multiple large language models (LLMs) through a single API key.
+## Configuration: OpenRouter API
 
-To use this library, you need to create an account on [OpenRouter](https://openrouter.ai/) and obtain an API key. You can then set the `OPENROUTER_API_KEY` environment variable as described below.
+This library uses the [OpenRouter API](https://openrouter.ai/) to generate literature reviews by interfacing with multiple LLMs. To configure:
 
-You can find a list of available models on the [OpenRouter Models page](https://openrouter.ai/models). The `BDTDReviewer` class defaults to using the `google/gemini-2.0-pro-exp-02-05:free` model, but you can specify a different model by passing the `model` argument to the constructor.
+1. **Create an Account & Obtain an API Key:**  
+   Sign up at [OpenRouter](https://openrouter.ai/) and get your API key.
+
+2. **Set the API Key as an Environment Variable:**  
+   Create a `.env` file in the project root (if needed) and add:
+   ```
+   OPENROUTER_API_KEY=YOUR_OPENROUTER_API_KEY
+   ```
+   Replace `YOUR_OPENROUTER_API_KEY` with your actual key.
+
+3. **Model Selection:**  
+   The default model for generating reviews is `google/gemini-2.0-pro-exp-02-05:free`. You may override this by passing a different model name via the `model` argument.
+
+---
 
 ## Usage
 
-Before using the library, you need to set the `OPENROUTER_API_KEY` environment variable. You can do this by adding the following line to your `.env` file (create one if it doesn't exist in the project root):
+Before using the library, ensure that the `OPENROUTER_API_KEY` environment variable is set.
 
-```
-OPENROUTER_API_KEY=YOUR_OPENROUTER_API_KEY
-```
+### Systematic Review Example
 
-Replace `YOUR_OPENROUTER_API_KEY` with your actual OpenRouter API key.
-
-### Systematic Review
+Here is an example script for performing a systematic review:
 
 ```python
 import os
-from bdtdfinder.BDTDResearchAgent import BDTDAgent
+from bdtdfinder.BDTDReviewer import BDTDReviewer
 
-# Get OpenRouter API key from environment variable
-openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-if not openrouter_api_key:
-    print("Error: OPENROUTER_API_KEY environment variable not set.")
-    exit()
+# Ensure the API key is set
+if not os.environ.get("OPENROUTER_API_KEY"):
+    raise EnvironmentError("OPENROUTER_API_KEY environment variable not set.")
 
-agent = BDTDReviewer(
+# Create a BDTDReviewer instance with your parameters
+reviewer = BDTDReviewer(
     theme="regressão beta",
-    download_pdfs=False,   # If True, downloads all PDFs from dissertations, thesis and so on.
-    scrape_text=True,
-    max_pages=1,
-    max_title_review=2,
-    output_lang='pt-BR',
-    output_dir="results",
+    output_lang="pt-BR",
+    max_pages=1,              # Maximum pages to crawl
+    max_title_review=2,       # Maximum number of titles to process
+    download_pdfs=False,      # Set to True to download PDFs
+    scrape_text=True,         # Enable text scraping from webpages
+    output_dir="results",     # Custom output directory
+    debug=True,               # Enable debug mode for detailed logs
+    model="google/gemini-2.0-pro-exp-02-05:free"
 )
-agent.run()
+
+# Run the review process
+output_file = reviewer.run()
+print(f"Literature review saved in: {output_file}")
 ```
+
+---
 
 ## Output Structure
 
+After execution, the output directory (defined by `--output-dir` or the `output_dir` parameter) will contain:
+
 ```
-output/
-├── folder for PDFs        # If download_pdfs=True downloads all academic work PDFs
-├── results.csv            # Raw search results
-├── results_filtered.csv   # Filtered results
-├── results_page.csv       # Page content analysis
-└── literature_review.md   # Generated review
+results/
+├── [PDF folders]          # Folders with PDFs (if download_pdfs=True)
+├── results.csv            # Raw search results from BDTD
+├── results_filtered.csv   # Filtered search results
+├── results_page.csv       # Plain text content scraped from webpages
+└── literature_review_<timestamp>.md   # Generated literature review in Markdown format
 ```
 
-## Running the Test Script
+---
 
-To run the test script, follow these steps:
+## Core Components
 
-1.  Ensure that you have set the `OPENROUTER_API_KEY` environment variable as described above.
-2.  Run the test script using the following command:
+### BDTDReviewer (Core Class)
 
-    ```bash
-    python test.py
-    ```
+The **BDTDReviewer** class is the central orchestrator for the entire literature review process. It integrates various modules to perform the following tasks:
 
-## Features in Detail
+- **Crawling & Search:**  
+  Initiates a search on BDTD via the **BDTDAgent** (which internally uses **BDTDCrawler**) to retrieve raw academic records.
+  
+- **PDF & Text Processing:**  
+  Uses the **PDFDownloader** (when enabled) to download PDFs, and scrapes plain text content from webpages to extract relevant metadata.
+  
+- **Metadata Extraction:**  
+  Sends extracted text to the OpenRouter API for metadata extraction using a predefined system prompt. The response is cleaned (removing markdown delimiters, etc.) and converted to a JSON dictionary.
+  
+- **Review Generation:**  
+  Formats the extracted metadata into a prompt and calls the OpenRouter API again (using another detailed system prompt) to generate a comprehensive literature review.
+  
+- **Output Management:**  
+  Manages an output directory (configurable via the `--output-dir` argument) by cleaning previous outputs and saving all generated files (CSV files, Markdown review, downloaded PDFs) in the same location.
+  
+**Key Attributes:**
+- `theme`: The subject of the literature review.
+- `output_lang`: Language in which the review will be generated.
+- `max_pages`: Maximum pages to crawl on the BDTD.
+- `max_title_review`: Maximum number of titles to process.
+- `download_pdfs`: Flag to download PDF files.
+- `scrape_text`: Flag to extract text from webpages.
+- `output_dir`: Directory for all output files.
+- `debug`: Flag to enable detailed debug logs.
+- `model`: Specifies the LLM model to use.
+- `openrouter_api_key`: API key for accessing OpenRouter services.
 
-### Search & Crawling
+**Core Methods:**
+- `_call_openrouter()`: Calls the OpenRouter API with provided prompts.
+- `_extract_metadata()`: Extracts metadata from text using the OpenRouter API.
+- `_generate_review()`: Generates the final literature review by formatting metadata and calling the API.
+- `run()`: Coordinates the entire process—from cleaning the output directory, invoking the agent for crawling/scraping, to generating and saving the final review.
 
-- Multi-page crawling support
-- Automated PDF detection and download
-- Content scraping and text extraction
-
-### Analysis
-
-- Text clustering and topic modeling
-- Sentiment analysis
-- Temporal distribution analysis
-- Keyword extraction
-- Quality metrics calculation
-
-### Review Generation
-
-- Automated literature review generation
-- Citation management
-- Theme-based content organization
-- Research gap identification
-
-## Important Classes
+---
 
 ### BDTDCrawler
 
-The `BDTDCrawler` class is responsible for crawling the BDTD (Brazilian Digital Library of Theses and Dissertations) and extracting metadata from the search results. It provides methods for:
+- **Purpose:** Crawls the BDTD database to search for theses and dissertations based on provided keywords.
+- **Functions:**  
+  - Constructs query URLs.
+  - Fetches search results.
+  - Processes and saves raw data to CSV.
 
--   Creating query URLs based on search keywords and parameters.
--   Fetching search results from the BDTD API.
--   Processing the search results and extracting relevant information.
--   Saving the extracted data to a CSV file.
+---
+
+### BDTDAgent
+
+- **Purpose:** Integrates the crawling (via BDTDCrawler), filtering, PDF downloading (via PDFDownloader), and text scraping tasks.
+- **Functions:**  
+  - Executes multi-page searches.
+  - Filters results by relevance.
+  - Saves output files (CSV for raw results, filtered results, and page text).
+
+---
 
 ### PDFDownloader
 
-The `PDFDownloader` class is responsible for downloading PDF files from the URLs extracted by the `BDTDCrawler`. It provides methods for:
+- **Purpose:** Locates and downloads PDF files from academic webpages.
+- **Functions:**  
+  - Follows URL redirects.
+  - Downloads PDFs and saves them in a configurable directory.
+  - Handles download errors gracefully.
 
--   Following redirects to get the final URL of a PDF file.
--   Downloading PDF files from a given URL.
--   Handling potential errors during the download process.
+---
 
 ## Dependencies
 
-The library depends on the following Python packages:
+This library requires the following Python packages:
 
--   beautifulsoup4
--   requests
--   openai
--   python-dotenv
--   tiktoken
--   pandas
+- `beautifulsoup4`
+- `requests`
+- `openai`
+- `python-dotenv`
+- `tiktoken`
+- `pandas`
+
+Install these packages via pip if they are not already installed.
+
+---
+
+## Running the Test Script
+
+To run the provided test script:
+
+1. Ensure the `OPENROUTER_API_KEY` environment variable is set.
+2. Execute the test script:
+   ```bash
+   python test.py
+   ```
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Feel free to submit pull requests or open issues to enhance functionality or fix bugs.
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+By following these instructions, you can efficiently perform automated research and generate systematic literature reviews using the BDTD. Enjoy exploring and contributing to the project!
