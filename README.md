@@ -40,7 +40,7 @@ OPENROUTER_API_KEY=YOUR_OPENROUTER_API_KEY
 
 Replace `YOUR_OPENROUTER_API_KEY` with your actual OpenRouter API key.
 
-### Basic Search
+### Systematic Review
 
 ```python
 import os
@@ -54,7 +54,7 @@ if not openrouter_api_key:
 
 agent = BDTDReviewer(
     theme="regressão beta",
-    download_pdfs=True,
+    download_pdfs=False,   # If True, downloads all PDFs from dissertations, thesis and so on.
     scrape_text=True,
     max_pages=1,
     max_title_review=2,
@@ -64,33 +64,15 @@ agent = BDTDReviewer(
 agent.run()
 ```
 
-### Systematic Review
-
-```python
-import os
-from bdtdfinder.BDTDReviewer import BDTDReviewer
-
-# Get OpenRouter API key from environment variable
-openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-if not openrouter_api_key:
-    print("Error: OPENROUTER_API_KEY environment variable not set.")
-    exit()
-
-reviewer = BDTDReviewer(
-    theme="your research theme",
-    output_dir="output"
-)
-review = reviewer.run()
-```
-
 ## Output Structure
 
 ```
 output/
+├── folder for PDFs        # If download_pdfs=False downloads all pdf found for academic work
 ├── results.csv            # Raw search results
 ├── results_filtered.csv   # Filtered results
-├── results_page.csv      # Page content analysis
-└── literature_review.md  # Generated review
+├── results_page.csv       # Page content analysis
+└── literature_review.md   # Generated review
 ```
 
 ## Running the Test Script
