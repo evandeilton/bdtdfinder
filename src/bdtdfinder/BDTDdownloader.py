@@ -451,7 +451,12 @@ class PDFDownloader:
 #             pdf_path = self.download_pdf(final_url)
 #             if pdf_path:
 #                 downloaded_files.append(pdf_path)
-#             return downloaded_files
+#         return downloaded_files
+#
+#
+# if __name__ == "__main__":
+#     downloader = PDFDownloader()
+#     downloader.process_page("https://www.google.com")
         
 #         # Encontra links para PDFs
 #         pdf_links = self.find_pdf_links(soup, final_url)

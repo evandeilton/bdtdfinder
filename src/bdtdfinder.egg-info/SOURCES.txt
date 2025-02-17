@@ -1,0 +1,13 @@
+LICENSE
+README.md
+setup.py
+src/bdtdfinder/BDTDResearchAgent.py
+src/bdtdfinder/BDTDReviewer.py
+src/bdtdfinder/BDTDdownloader.py
+src/bdtdfinder/BDTDfinder.py
+src/bdtdfinder/__init__.py
+src/bdtdfinder.egg-info/PKG-INFO
+src/bdtdfinder.egg-info/SOURCES.txt
+src/bdtdfinder.egg-info/dependency_links.txt
+src/bdtdfinder.egg-info/requires.txt
+src/bdtdfinder.egg-info/top_level.txt

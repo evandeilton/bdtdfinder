@@ -213,16 +213,4 @@ class BDTDCrawler:
         
         return filename
 
-# Exemplo de uso
-if __name__ == "__main__":
-    crawler = BDTDCrawler()
-    
-    try:
-        output_file = crawler.search_and_save(
-            keywords=["regressão beta"],
-            search_type="AllFields",
-            limit=50
-        )
-        print(f"Resultados salvos em: {output_file}")
-    except Exception as e:
-        print(f"Erro durante a execução: {e}")
+pass

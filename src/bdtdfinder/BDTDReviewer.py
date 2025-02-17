@@ -9,9 +9,9 @@ from datetime import datetime
 import shutil
 
 # Imports dos módulos existentes
-from BDTDfinder import BDTDCrawler
-from BDTDdownloader import PDFDownloader
-from BDTDResearchAgent import BDTDAgent
+from .BDTDfinder import BDTDCrawler
+from .BDTDdownloader import PDFDownloader
+from .BDTDResearchAgent import BDTDAgent
 
 class BDTDReviewer:
     """
@@ -409,7 +409,7 @@ def parse_args():
     parser.add_argument(
         "--max-pages",
         type=int,
-        default=50,
+        default=5,
         help="Número máximo de páginas para busca (default: 50)"
     )
     parser.add_argument(
@@ -475,5 +475,4 @@ def main():
         if args.debug:
             raise
 
-if __name__ == "__main__":
-    main()
+pass
