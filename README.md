@@ -68,7 +68,7 @@ agent.run()
 
 ```
 output/
-├── folder for PDFs        # If download_pdfs=False downloads all pdf found for academic work
+├── folder for PDFs        # If download_pdfs=True downloads all academic work PDFs
 ├── results.csv            # Raw search results
 ├── results_filtered.csv   # Filtered results
 ├── results_page.csv       # Page content analysis
