@@ -144,7 +144,7 @@ MATHEMATICAL_NOTATION:
     - Relationship between all titles and {theme}
 
 4. Output Structure should have:
-    - All sections and subsections must be clearly defined in Markdown notation (#, ##, ### - max depth 3)
+    - All sections and subsections must be clearly defined in Markdown notation (#, ##, ### - max depth 3. NO NUMBERING)
     - Summary about Literature Review Strategy (single paragraph)
     - Sessions for {theme}:
         - Summary of Literature Review Strategy (itself)
@@ -217,7 +217,7 @@ QUALITY_PARAMETERS:
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": prompt}
                         ],
-                        "temperature": 0.0
+                        "temperature": 0.3
                     }
                 )
                 response.raise_for_status()
@@ -329,11 +329,12 @@ QUALITY_PARAMETERS:
                     except Exception as e:
                         print(f"    [DEBUG] Falha ao remover {file_path}. Motivo: {e}")
             
-            # 1. Executa o BDTDAgent
+            # 1. Executa o BDTDAgent passando também output_dir
             agent = BDTDAgent(
                 subject=self.theme,
                 max_pages_limit=self.max_pages,
-                download_pdf=self.download_pdfs
+                download_pdf=self.download_pdfs,
+                output_dir=self.output_dir  # <-- Parâmetro adicionado!
             )
             agent.scrape_text = self.scrape_text
             agent.run()
@@ -380,75 +381,9 @@ QUALITY_PARAMETERS:
                 f.write(review_text)
             
             return output_file
-            
+                
         except Exception as e:
             raise Exception(f"Erro no processo de revisão: {e}")
-
-    # def run(self) -> str:
-    #     """
-    #     Executa o processo completo de revisão sistemática.
-        
-    #     Returns:
-    #         str: Caminho do arquivo markdown com a revisão
-            
-    #     Raises:
-    #         Exception: Se houver erro em qualquer etapa do processo
-    #     """
-    #     try:
-    #         # 1. Executa o BDTDAgent
-    #         agent = BDTDAgent(
-    #             subject=self.theme,
-    #             max_pages_limit=self.max_pages,
-    #             download_pdf=self.download_pdfs
-    #         )
-    #         agent.scrape_text = self.scrape_text
-    #         agent.run()
-            
-    #         # 2. Lê o CSV com os textos extraídos
-    #         print("\n==> Iniciando extração de metadados dos textos...")
-    #         results_file = os.path.join(self.output_dir, "results_page.csv")
-    #         texts = []
-    #         with open(results_file, 'r', encoding='utf-8') as f:
-    #             reader = csv.DictReader(f)
-    #             for i, row in enumerate(reader, 1):
-    #                 # Pula linhas em que a coluna "results" está vazia
-    #                 if not row['results'].strip():
-    #                     print(f"    Linha {i} ignorada: coluna 'results' vazia.")
-    #                     continue
-    #                 if len(texts) >= self.max_title_review:
-    #                     break
-    #                 if self.debug:
-    #                     # Mostra os primeiros 200 caracteres do conteúdo lido do CSV
-    #                     print(f"    [DEBUG] Conteúdo da linha {i} do CSV (primeiros 200 caracteres):")
-    #                     print(f"    {row['results'][:200]}...\n")
-    #                 print(f"    Processando texto {i}...")
-    #                 metadata = self._extract_metadata(row['results'])
-    #                 texts.append(metadata)
-    #                 print(f"    ✓ Metadados extraídos: {metadata['title'][:50]}...\n")
-            
-    #         # 3. Gera a revisão de literatura
-    #         print("\n==> Iniciando geração da revisão de literatura...")
-    #         print(f"    Usando modelo: {self.model or 'padrão'}")
-    #         print(f"    Idioma: {self.output_lang}")
-    #         print(f"    Total de textos: {len(texts)}")
-    #         review_text = self._generate_review(texts)
-    #         print("    ✓ Revisão de literatura gerada com sucesso!")
-            
-    #         # 4. Salva o resultado
-    #         print("\n==> Salvando resultado...")
-    #         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    #         output_file = os.path.join(
-    #             self.output_dir,
-    #             f"literature_review_{timestamp}.md"
-    #         )
-            
-    #         with open(output_file, 'w', encoding='utf-8') as f:
-    #             f.write(review_text)
-            
-    #         return output_file
-            
-    #     except Exception as e:
-    #         raise Exception(f"Erro no processo de revisão: {e}")
 
 def parse_args():
     """
@@ -496,7 +431,7 @@ def parse_args():
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="output",
+        default="results",
         help="Diretório para saída (default: output)"
     )
     parser.add_argument(
@@ -508,7 +443,7 @@ def parse_args():
         "--model",
         type=str,
         default="google/gemini-2.0-pro-exp-02-05:free",
-        help="Modelo específico do OpenRouter a ser usado (opcional)"
+        help="Modelo específico do OpenRouter a ser usado: ver opções em https://openrouter.ai/models"
     )
     
     return parser.parse_args()

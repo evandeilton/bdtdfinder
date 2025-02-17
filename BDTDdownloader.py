@@ -10,24 +10,24 @@ class PDFDownloader:
     Classe para localizar e baixar PDFs de páginas web, com suporte a redirecionamentos e timeout.
     """
     
-    def __init__(self, download_folder="downloads", timeout=60):
+    def __init__(self, output_dir="downloads", timeout=60):
         """
         Inicializa o downloader.
         
         Args:
-            download_folder (str): Pasta onde os PDFs serão salvos.
+            output_dir (str): Diretório onde os PDFs serão salvos.
             timeout (int): Tempo máximo (em segundos) para aguardar uma resposta do servidor.
         """
-        self.download_folder = download_folder
+        self.output_dir = output_dir
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
         
-        # Cria a pasta de downloads se não existir
-        if not os.path.exists(download_folder):
-            os.makedirs(download_folder)
+        # Cria o diretório de saída se não existir
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
     
     def follow_redirects(self, url: str) -> str:
         """
@@ -175,7 +175,7 @@ class PDFDownloader:
                 if not filename or not filename.strip():
                     filename = 'document.pdf'
             
-            filepath = os.path.join(self.download_folder, filename)
+            filepath = os.path.join(self.output_dir, filename)
             
             # Baixa o arquivo em chunks
             with open(filepath, 'wb') as f:
@@ -235,15 +235,6 @@ class PDFDownloader:
         return downloaded_files
 
 
-
-
-
-
-
-
-
-
-
 # import requests
 # from bs4 import BeautifulSoup
 # import os
@@ -253,17 +244,19 @@ class PDFDownloader:
 
 # class PDFDownloader:
 #     """
-#     Classe para localizar e baixar PDFs de páginas web, com suporte a redirecionamentos.
+#     Classe para localizar e baixar PDFs de páginas web, com suporte a redirecionamentos e timeout.
 #     """
     
-#     def __init__(self, download_folder="downloads"):
+#     def __init__(self, download_folder="downloads", timeout=60):
 #         """
 #         Inicializa o downloader.
         
 #         Args:
-#             download_folder (str): Pasta onde os PDFs serão salvos
+#             download_folder (str): Pasta onde os PDFs serão salvos.
+#             timeout (int): Tempo máximo (em segundos) para aguardar uma resposta do servidor.
 #         """
 #         self.download_folder = download_folder
+#         self.timeout = timeout
 #         self.session = requests.Session()
 #         self.session.headers.update({
 #             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -284,10 +277,12 @@ class PDFDownloader:
 #             str: URL final após todos os redirecionamentos
 #         """
 #         try:
-#             # Permite redirecionamentos mas não baixa o conteúdo ainda
-#             response = self.session.get(url, allow_redirects=True, stream=True)
-#             response.close()  # Fecha a conexão já que só queremos a URL final
+#             response = self.session.get(url, allow_redirects=True, stream=True, timeout=self.timeout)
+#             response.close()
 #             return response.url
+#         except requests.exceptions.Timeout:
+#             print(f"Tempo excedido ao acessar (redirect) {url}. Pulando...")
+#             return url
 #         except requests.exceptions.RequestException as e:
 #             print(f"Erro ao seguir redirecionamento: {e}")
 #             return url
@@ -300,15 +295,12 @@ class PDFDownloader:
 #             url (str): URL da página
             
 #         Returns:
-#             tuple: (BeautifulSoup, URL final)
+#             tuple: (BeautifulSoup ou None, URL final)
 #         """
 #         try:
-#             # Primeiro, segue todos os redirecionamentos
 #             final_url = self.follow_redirects(url)
-#             print(f"URL final após redirecionamentos: {final_url}")
-            
 #             # Agora obtém o conteúdo da página final
-#             response = self.session.get(final_url)
+#             response = self.session.get(final_url, timeout=self.timeout)
 #             response.raise_for_status()
             
 #             # Se a resposta for um PDF, retorna None e a URL
@@ -317,9 +309,12 @@ class PDFDownloader:
                 
 #             return BeautifulSoup(response.text, 'html.parser'), final_url
             
+#         except requests.exceptions.Timeout:
+#             print(f"Tempo excedido ao acessar {url}. Pulando página...")
+#             return None, url
 #         except requests.exceptions.RequestException as e:
 #             print(f"Erro ao acessar a página: {e}")
-#             raise
+#             return None, url
     
 #     def is_pdf_url(self, url: str) -> bool:
 #         """
@@ -388,37 +383,34 @@ class PDFDownloader:
     
 #     def download_pdf(self, url: str, filename: str = None) -> str:
 #         """
-#         Baixa um arquivo PDF.
+#         Baixa um arquivo PDF (ou supostamente PDF), respeitando timeout.
         
 #         Args:
-#             url (str): URL do PDF
-#             filename (str, optional): Nome do arquivo para salvar
+#             url (str): URL do arquivo
+#             filename (str, optional): Nome do arquivo para salvar. Se None, tenta extrair do 'Content-Disposition' ou URL.
             
 #         Returns:
 #             str: Caminho do arquivo baixado
 #         """
 #         try:
-#             # Segue redirecionamentos para obter a URL final do PDF
+#             # Segue redirecionamentos para obter a URL final
 #             final_url = self.follow_redirects(url)
-#             response = self.session.get(final_url, stream=True)
+            
+#             response = self.session.get(final_url, stream=True, timeout=self.timeout)
 #             response.raise_for_status()
             
 #             # Tenta obter o nome do arquivo
 #             if not filename:
-#                 # Tenta do Content-Disposition
 #                 content_disposition = response.headers.get('content-disposition')
 #                 if content_disposition and 'filename=' in content_disposition:
-#                     filename = re.findall('filename=(.+)', content_disposition)[0].strip('"\'')
-#                 else:
-#                     # Tenta da URL
-#                     filename = os.path.basename(urlparse(final_url).path)
-#                     # Remove parâmetros da query se existirem
-#                     filename = filename.split('?')[0]
-                    
+#                     filename_match = re.findall(r'filename=(.+)', content_disposition)
+#                     if filename_match:
+#                         filename = filename_match[0].strip('"\'')
+#                 if not filename:
+#                     # Tenta extrair do path
+#                     filename = os.path.basename(urlparse(final_url).path).split('?')[0]
 #                 if not filename or not filename.strip():
 #                     filename = 'document.pdf'
-#                 if not filename.lower().endswith('.pdf'):
-#                     filename += '.pdf'
             
 #             filepath = os.path.join(self.download_folder, filename)
             
@@ -430,9 +422,12 @@ class PDFDownloader:
             
 #             return filepath
             
+#         except requests.exceptions.Timeout:
+#             print(f"Tempo excedido para download de {url}. Pulando este arquivo...")
+#             return ""  # Retorna vazio indicando falha
 #         except requests.exceptions.RequestException as e:
 #             print(f"Erro ao baixar o PDF: {e}")
-#             raise
+#             return ""
     
 #     def process_page(self, url: str) -> list:
 #         """
@@ -449,51 +444,29 @@ class PDFDownloader:
 #         # Obtém o conteúdo da página e a URL final após redirecionamentos
 #         soup, final_url = self.get_page_content(url)
         
+#         downloaded_files = []
+        
 #         # Se a URL final já é um PDF, baixa diretamente
 #         if soup is None and self.is_pdf_url(final_url):
-#             try:
-#                 filepath = self.download_pdf(final_url)
-#                 return [filepath]
-#             except Exception as e:
-#                 print(f"Erro ao baixar PDF direto: {e}")
-#                 return []
+#             pdf_path = self.download_pdf(final_url)
+#             if pdf_path:
+#                 downloaded_files.append(pdf_path)
+#             return downloaded_files
         
 #         # Encontra links para PDFs
 #         pdf_links = self.find_pdf_links(soup, final_url)
         
 #         if not pdf_links:
 #             print("Nenhum PDF encontrado na página.")
-#             return []
+#             return downloaded_files
         
 #         # Baixa cada PDF encontrado
-#         downloaded_files = []
 #         for pdf_url in pdf_links:
-#             try:
-#                 print(f"Tentando baixar PDF: {pdf_url}")
-#                 filepath = self.download_pdf(pdf_url)
-#                 downloaded_files.append(filepath)
-#                 print(f"PDF salvo em: {filepath}")
-                
-#                 # Pequena pausa entre downloads
-#                 time.sleep(1)
-                
-#             except Exception as e:
-#                 print(f"Erro ao baixar {pdf_url}: {e}")
-#                 continue
+#             print(f"Tentando baixar PDF: {pdf_url}")
+#             pdf_path = self.download_pdf(pdf_url)
+#             if pdf_path:
+#                 downloaded_files.append(pdf_path)
+#             # Pausa leve para evitar bombardeio de requests
+#             time.sleep(0.5)
         
 #         return downloaded_files
-
-# # Exemplo de uso
-# if __name__ == "__main__":
-#     downloader = PDFDownloader()
-    
-#     try:
-#         url = "http://www.teses.usp.br/teses/disponiveis/45/45133/tde-15052007-110020/"
-#         downloaded_files = downloader.process_page(url)
-        
-#         print("\nArquivos baixados:")
-#         for file in downloaded_files:
-#             print(f"- {file}")
-            
-#     except Exception as e:
-#         print(f"Erro durante a execução: {e}")
