@@ -20,6 +20,8 @@ cd bdtdfinder
 pip install .
 ```
 
+The dependencies will be automatically installed when you install the package.
+
 ## OpenRouter API
 
 This library uses the OpenRouter API to generate literature reviews. OpenRouter is a service that allows you to access multiple large language models (LLMs) through a single API key.
@@ -143,6 +145,17 @@ The `PDFDownloader` class is responsible for downloading PDF files from the URLs
 -   Following redirects to get the final URL of a PDF file.
 -   Downloading PDF files from a given URL.
 -   Handling potential errors during the download process.
+
+## Dependencies
+
+The library depends on the following Python packages:
+
+-   beautifulsoup4
+-   requests
+-   openai
+-   python-dotenv
+-   tiktoken
+-   pandas
 
 ## Contributing
 
