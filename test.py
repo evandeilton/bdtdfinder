@@ -22,7 +22,7 @@ def main():
         scrape_text=True,
         max_pages=1,
         max_title_review=5,
-        output_lang='en-US',
+        output_lang='pr-BR',
         output_dir="results",
     )
     agent.run()
