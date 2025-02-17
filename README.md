@@ -51,7 +51,7 @@ Clone the repository and install the package:
 
 ```bash
 # Clone the repository
-git clone https://github.com/evandeilton/bdtdfinder.git
+git clone https://github.com/evandeilton/bdtdonauta.git
 cd bdtdfinder
 
 # Install the package and its dependencies
