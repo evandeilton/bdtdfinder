@@ -49,7 +49,7 @@ Clone the repository and install the package:
 ```bash
 # Clone the repository
 git clone https://github.com/evandeilton/bdtdonauta.git
-cd bdtdfinder
+cd bdtdonauta
 
 # Install the package and its dependencies
 pip install .
