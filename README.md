@@ -1,122 +1,121 @@
 # BDTD Research Agent & Reviewer
 
-**BDTD Research Agent & Reviewer** is a Python library for automating systematic literature reviews using Brazil's Digital Library of Theses and Dissertations (BDTD). It automates search, filtering, downloading, and analysis of academic documents and utilizes OpenRouter API with advanced LLMs to generate comprehensive reviews.
+BDTD Research Agent & Reviewer é uma biblioteca Python que automatiza revisões sistemáticas de literatura utilizando a Biblioteca Digital de Teses e Dissertações (BDTD). Ela realiza a busca, filtragem, download e análise de documentos acadêmicos e, através da OpenRouter API com LLMs avançados, gera revisões completas.
 
 ---
 
-## Key Features
+## Principais Funcionalidades
 
-- **Automated Search & Crawling:**  
-  - Intelligent multi-page crawling of BDTD.
+- **Pesquisa Automatizada:**  
+  - Crawling inteligente e multi-página na BDTD.
 
-- **Content Processing:**  
-  - Extracts metadata and text from academic webpages.  
-  - Automates PDF downloading and organization.
+- **Processamento de Conteúdo:**  
+  - Extração de metadados e texto de páginas acadêmicas.  
+  - Download e organização de arquivos PDF.
 
-- **Review Generation:**  
-  - Uses LLMs to generate detailed, evidence-based literature reviews.
+- **Geração de Revisões:**  
+  - Criação de revisões detalhadas e baseadas em evidências com o auxílio de LLMs.
 
-- **Configurable Output:**  
-  - Allows customization of the output directory and search parameters.
+- **Configuração Personalizável:**  
+  - Definição de diretório de saída e parâmetros de pesquisa.
 
-- **User Interface:**  
-  - Provides a dedicated UI (Streamlit-based) for an interactive experience.
+- **Interface de Usuário:**  
+  - UI dedicada (executada via Streamlit) para facilitar o uso.
 
 ---
 
-## Installation & Configuration
+## Instalação e Configuração
 
-**Installation:**
+**Instalação:**
 
-1. Clone the repository and install the package:
+1. Clone o repositório e instale o pacote:
    ```bash
    git clone https://github.com/evandeilton/bdtdfinder.git
    cd bdtdfinder
    pip install .
    ```
    
-**OpenRouter API Configuration:**
+**Configuração da OpenRouter API:**
 
-- **Get an API Key:**  
-  Create an account at [OpenRouter](https://openrouter.ai/) and retrieve your key.
+- **Obtenha sua API Key:**  
+  Crie uma conta em [OpenRouter](https://openrouter.ai/) e obtenha sua chave.
 
-- **Set the Environment Variable:**  
-  Add it to a `.env` file (or directly in the environment):
+- **Defina a variável de ambiente:**  
+  Adicione em um arquivo `.env` (ou diretamente no ambiente):
   ```
   OPENROUTER_API_KEY=YOUR_OPENROUTER_API_KEY
   ```
   
-- **Model Selection:**  
-  The default model is `google/gemini-2.0-pro-exp-02-05:free`, but you can override it by specifying another model via the `model` parameter.
+- **Seleção de Modelo:**  
+  O modelo padrão é `google/gemini-2.0-pro-exp-02-05:free`, mas pode ser substituído via argumento `model`.
 
 ---
 
-## Usage
+## Exemplo de Uso
 
-Before running the library, ensure that the `OPENROUTER_API_KEY` environment variable is set.  
-Here’s an example of performing a systematic review:
+Antes de executar, certifique-se de que a variável `OPENROUTER_API_KEY` está definida. Segue um exemplo para realizar uma revisão sistemática:
 
 ```python
 import os
 from bdtdfinder.BDTDReviewer import BDTDReviewer
 
-# Check if the API key is set
+# Verifica se a chave da API está definida
 if not os.environ.get("OPENROUTER_API_KEY"):
-    raise EnvironmentError("OPENROUTER_API_KEY environment variable is not set.")
+    raise EnvironmentError("A variável de ambiente OPENROUTER_API_KEY não está definida.")
 
-# Create an instance of BDTDReviewer with the desired parameters
+# Cria a instância do revisor com os parâmetros desejados
 reviewer = BDTDReviewer(
-    theme="beta regression",
-    output_lang="en-US",
-    max_pages=1,              # Maximum pages to crawl
-    max_title_review=2,       # Maximum number of titles to process
-    download_pdfs=False,      # Set True to download PDFs
-    scrape_text=True,         # Enable text extraction from webpages
-    output_dir="results",     # Output directory
-    debug=True,               # Debug mode for detailed logs
+    theme="regressão beta",
+    output_lang="pt-BR",
+    max_pages=1,              # Máximo de páginas a serem analisadas
+    max_title_review=2,       # Máximo de títulos a processar
+    download_pdfs=False,      # True para baixar PDFs
+    scrape_text=True,         # Habilita a extração de texto das páginas
+    output_dir="results",     # Diretório de saída
+    debug=True,               # Modo debug para logs detalhados
     model="google/gemini-2.0-pro-exp-02-05:free"
 )
 
-# Run the review process
+# Executa o processo de revisão
 output_file = reviewer.run()
-print(f"Review saved in: {output_file}")
+print(f"Revisão salva em: {output_file}")
 ```
 
-**Note on the UI:**  
-The UI does not work in notebooks. Run it from the terminal using:
+**Nota sobre a UI:**  
+A interface não funciona em notebooks. Para executá-la, use:
 ```bash
 streamlit run /bdtdfinder/src/bdtdfinder/BDTDUi.py
 ```
 
 ---
 
-## Output Structure & Core Components
+## Estrutura de Saída e Componentes Principais
 
-**Output:**  
-After execution, the output directory (e.g., `results/`) will contain:
-- PDF folders (if `download_pdfs=True`)
-- CSV files with raw and filtered search results
-- A Markdown file with the generated literature review (timestamped)
+**Saída:**  
+Após a execução, o diretório de saída (por exemplo, `results/`) conterá:
+- Pastas com PDFs (se o download estiver habilitado)
+- Arquivos CSV com os resultados brutos e filtrados
+- Arquivo Markdown com a revisão gerada (nomeado com timestamp)
 
-**Core Components:**
+**Componentes Principais:**
 
 - **BDTDReviewer:**  
-  Orchestrates the entire process, from searching BDTD to generating the final review.
+  Coordena todo o processo, desde a pesquisa na BDTD até a geração final da revisão.
 
 - **BDTDCrawler:**  
-  Performs thesis and dissertation searches in BDTD.
+  Responsável pela busca de teses e dissertações na BDTD.
 
 - **BDTDAgent:**  
-  Integrates crawling, filtering, PDF downloading, and text extraction.
+  Integra as etapas de crawling, filtragem, download de PDFs e extração de texto.
 
 - **PDFDownloader:**  
-  Manages the downloading and organization of PDF files.
+  Gerencia o download e a organização dos arquivos PDF.
 
 ---
 
-## Dependencies & Testing
+## Dependências e Testes
 
-**Required Dependencies:**
+**Dependências Necessárias:**
 - beautifulsoup4
 - requests
 - openai
@@ -124,20 +123,20 @@ After execution, the output directory (e.g., `results/`) will contain:
 - tiktoken
 - pandas
 
-Install via pip if not already installed.
+Instale-as via pip, se necessário.
 
-**Running the Test Script:**
+**Executando o Script de Teste:**
 ```bash
 python test.py
 ```
 
 ---
 
-## Contributing & License
+## Contribuição e Licença
 
-Contributions are welcome! Feel free to submit pull requests or open issues for enhancements or bug fixes.  
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Contribuições são bem-vindas! Envie pull requests ou abra issues para sugestões e correções.  
+Este projeto é licenciado sob a MIT License. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
-Automate your research and generate systematic literature reviews efficiently! 🚀
+Aproveite para automatizar sua pesquisa e gerar revisões sistemáticas de maneira prática e eficiente!
