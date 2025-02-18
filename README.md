@@ -1,7 +1,3 @@
-Below is an improved README that includes accurate and detailed information about the core class **BDTDReviewer** and its interactions with the other components:
-
----
-
 # BDTD Research Agent & Reviewer
 
 A Python library for automated research and systematic literature reviews using Brazil's Digital Library of Theses and Dissertations (BDTD).
@@ -42,6 +38,7 @@ This library streamlines the process of conducting systematic literature reviews
 - **PDF Management:** Automated download, validation, and organization of PDFs.
 - **Systematic Review Generation:** Generate detailed, evidence-based literature reviews using LLMs.
 - **Configurable Output:** Fully configurable output directory to store all results.
+- **User-Friendly Interface:** Streamlit-based UI for easy interaction and visualization of results.
 
 ---
 
@@ -207,14 +204,36 @@ The **BDTDReviewer** class is the central orchestrator for the entire literature
 
 This library requires the following Python packages:
 
-- `beautifulsoup4`
-- `requests`
-- `openai`
-- `python-dotenv`
-- `tiktoken`
-- `pandas`
+- `beautifulsoup4`: For web scraping
+- `requests`: For making HTTP requests
+- `openai`: For OpenAI API integration
+- `python-dotenv`: For environment variable management
+- `tiktoken`: For token counting
+- `pandas`: For data manipulation
+- `streamlit`: For the graphical user interface
 
-Install these packages via pip if they are not already installed.
+Install these packages via pip:
+```bash
+pip install .
+```
+
+For the UI functionality, make sure to also install streamlit:
+```bash
+pip install streamlit
+```
+
+## Using the Graphical Interface
+To start the graphical interface, run:
+```bash
+streamlit run src/bdtdfinder/BDTDUi.py
+```
+
+The UI provides:
+- Easy configuration of search parameters
+- Real-time progress tracking
+- Interactive review visualization
+- PDF management and download
+- Configurable model selection for AI processing
 
 ---
 
@@ -243,3 +262,5 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ---
 
 By following these instructions, you can efficiently perform automated research and generate systematic literature reviews using the BDTD. Enjoy exploring and contributing to the project!
+
+---

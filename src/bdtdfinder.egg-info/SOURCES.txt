@@ -3,6 +3,7 @@ README.md
 setup.py
 src/bdtdfinder/BDTDResearchAgent.py
 src/bdtdfinder/BDTDReviewer.py
+src/bdtdfinder/BDTDUi.py
 src/bdtdfinder/BDTDdownloader.py
 src/bdtdfinder/BDTDfinder.py
 src/bdtdfinder/__init__.py

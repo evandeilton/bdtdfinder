@@ -1,0 +1,11 @@
+{
+    "research_theme": "modelo linear generalizado",
+    "output_lang": "pt-BR",
+    "max_pages": 1,
+    "max_titles": 5,
+    "download_pdfs": true,
+    "scrape_text": true,
+    "debug": false,
+    "output_dir": "results",
+    "model": "google/gemini-2.0-pro-exp-02-05:free"
+}

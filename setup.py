@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="bdtdfinder",
-    version="0.1.0",
+    version="0.1.1",
     author="José Lopes",
     author_email="evandeilton@gmail.com",
     description="A library for crawling, downloading, and reviewing theses and dissertations from the BDTD.",
@@ -26,7 +26,8 @@ setup(
         "openai",
         "python-dotenv",
         "tiktoken",
-        "pandas"
+        "pandas",
+        "streamlit"
     ],
     package_data={'bdtdfinder': ['py.typed']}
 )
