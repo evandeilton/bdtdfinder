@@ -1,7 +1,3 @@
-Below is an improved README that includes accurate and detailed information about the core class **BDTDReviewer** and its interactions with the other components:
-
----
-
 # BDTD Research Agent & Reviewer
 
 A Python library for automated research and systematic literature reviews using Brazil's Digital Library of Theses and Dissertations (BDTD).
