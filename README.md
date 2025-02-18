@@ -1,3 +1,7 @@
+Below is an improved README that includes accurate and detailed information about the core class **BDTDReviewer** and its interactions with the other components:
+
+---
+
 # BDTD Research Agent & Reviewer
 
 A Python library for automated research and systematic literature reviews using Brazil's Digital Library of Theses and Dissertations (BDTD).
@@ -11,7 +15,6 @@ A Python library for automated research and systematic literature reviews using 
 - [Installation](#installation)
 - [Configuration: OpenRouter API](#configuration-openrouter-api)
 - [Usage](#usage)
-  - [Using the Graphical Interface](#using-the-graphical-interface)
   - [Systematic Review Example](#systematic-review-example)
 - [Output Structure](#output-structure)
 - [Core Components](#core-components)
@@ -39,7 +42,6 @@ This library streamlines the process of conducting systematic literature reviews
 - **PDF Management:** Automated download, validation, and organization of PDFs.
 - **Systematic Review Generation:** Generate detailed, evidence-based literature reviews using LLMs.
 - **Configurable Output:** Fully configurable output directory to store all results.
-- **User-Friendly Interface:** Streamlit-based UI for easy interaction and visualization of results.
 
 ---
 
@@ -49,8 +51,8 @@ Clone the repository and install the package:
 
 ```bash
 # Clone the repository
-git clone https://github.com/evandeilton/bdtdonauta.git
-cd bdtdonauta
+git clone https://github.com/evandeilton/bdtdfinder.git
+cd bdtdfinder
 
 # Install the package and its dependencies
 pip install .
@@ -83,29 +85,11 @@ This library uses the [OpenRouter API](https://openrouter.ai/) to generate liter
 
 Before using the library, ensure that the `OPENROUTER_API_KEY` environment variable is set.
 
-### Using the Graphical Interface
-
-You have two options to run the graphical interface:
-
-1. **Command Line Interface (CLI)**
-   ```bash
-   streamlit run src/bdtdfinder/BDTDUi.py
-   ```
-
-2. **Jupyter Notebook**
-   ```python
-   import streamlit as st
-   from bdtdfinder.BDTDUi import create_ui
-   
-   # Create and display the UI in the notebook
-   create_ui()
-   ```
-
-   Note: When running in a notebook, you'll need to have `streamlit` installed and may need the `streamlit-notebook` extension for optimal display.
-
 ### Systematic Review Example
 
-Here is an example script for performing a systematic review:
+Here is an example script for performing a systematic review.
+
+**Note:** When running `BDTDUi.py` directly with `streamlit run`, ensure that the `OPENROUTER_API_KEY` environment variable is set and that the import statement in `BDTDUi.py` uses an absolute import (`from bdtdfinder.BDTDReviewer import BDTDReviewer`).
 
 ```python
 import os
@@ -225,36 +209,14 @@ The **BDTDReviewer** class is the central orchestrator for the entire literature
 
 This library requires the following Python packages:
 
-- `beautifulsoup4`: For web scraping
-- `requests`: For making HTTP requests
-- `openai`: For OpenAI API integration
-- `python-dotenv`: For environment variable management
-- `tiktoken`: For token counting
-- `pandas`: For data manipulation
-- `streamlit`: For the graphical user interface
+- `beautifulsoup4`
+- `requests`
+- `openai`
+- `python-dotenv`
+- `tiktoken`
+- `pandas`
 
-Install these packages via pip:
-```bash
-pip install .
-```
-
-For the UI functionality, make sure to also install streamlit:
-```bash
-pip install streamlit
-```
-
-## Using the Graphical Interface
-To start the graphical interface, run:
-```bash
-streamlit run src/bdtdfinder/BDTDUi.py
-```
-
-The UI provides:
-- Easy configuration of search parameters
-- Real-time progress tracking
-- Interactive review visualization
-- PDF management and download
-- Configurable model selection for AI processing
+Install these packages via pip if they are not already installed.
 
 ---
 
@@ -283,5 +245,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ---
 
 By following these instructions, you can efficiently perform automated research and generate systematic literature reviews using the BDTD. Enjoy exploring and contributing to the project!
-
----

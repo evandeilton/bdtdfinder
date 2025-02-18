@@ -50,11 +50,11 @@ def find_pdfs(directory):
 def create_ui():
     """Creates and returns the Streamlit UI components without running the server.
     This function can be used in Jupyter notebooks with streamlit components.
-    
+
     Example in Jupyter:
         import streamlit as st
-        from bdtdfinder.BDTDUi import create_ui
-        create_ui()
+        # from bdtdfinder.BDTDUi import create_ui
+        # create_ui()
     """
     st.set_page_config(
         page_title="BDTD - Agente de Revisão",

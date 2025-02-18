@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.2
 Name: bdtdfinder
 Version: 0.1.1
 Summary: A library for crawling, downloading, and reviewing theses and dissertations from the BDTD.
@@ -22,6 +22,16 @@ Provides-Extra: notebook
 Requires-Dist: ipykernel; extra == "notebook"
 Requires-Dist: notebook; extra == "notebook"
 Requires-Dist: streamlit>=1.22.0; extra == "notebook"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
 # BDTD Research Agent & Reviewer
 
