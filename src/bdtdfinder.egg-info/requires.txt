@@ -4,3 +4,9 @@ openai
 python-dotenv
 tiktoken
 pandas
+streamlit
+
+[notebook]
+ipykernel
+notebook
+streamlit>=1.22.0
