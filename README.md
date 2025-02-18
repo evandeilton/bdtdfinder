@@ -1,7 +1,3 @@
-Below is an improved README that includes accurate and detailed information about the core class **BDTDReviewer** and its interactions with the other components:
-
----
-
 # BDTD Research Agent & Reviewer
 
 A Python library for automated research and systematic literature reviews using Brazil's Digital Library of Theses and Dissertations (BDTD).
@@ -16,6 +12,8 @@ A Python library for automated research and systematic literature reviews using 
 - [Configuration: OpenRouter API](#configuration-openrouter-api)
 - [Usage](#usage)
   - [Systematic Review Example](#systematic-review-example)
+  - [Using the UI Interface](#using-the-ui-interface)
+  - [Using the CLI](#using-the-cli)
 - [Output Structure](#output-structure)
 - [Core Components](#core-components)
   - [BDTDReviewer (Core Class)](#bdtdreviewer-core-class)
@@ -115,6 +113,24 @@ reviewer = BDTDReviewer(
 # Run the review process
 output_file = reviewer.run()
 print(f"Literature review saved in: {output_file}")
+```
+
+### Using the UI Interface
+
+You can also use the Streamlit-based UI interface to perform systematic reviews. Ensure that the `OPENROUTER_API_KEY` environment variable is set.
+
+```bash
+# Run the Streamlit app
+streamlit run src/bdtdfinder/BDTDUi.py
+```
+
+### Using the CLI
+
+You can use the command-line interface to perform systematic reviews. Ensure that the `OPENROUTER_API_KEY` environment variable is set.
+
+```bash
+# Run the CLI
+python -m bdtdfinder.BDTDResearchAgent "regressão beta" --max_pages_limit 1 --download_pdf --scrape_text --output_dir results
 ```
 
 ---
