@@ -11,7 +11,7 @@ setup(
     description="A library for crawling, downloading, and reviewing theses and dissertations from the BDTD.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/evandeilton/bdtdfinder",  # Replace with the actual repo URL
+    url="https://github.com/evandeilton/bdtdfinder",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
@@ -29,5 +29,12 @@ setup(
         "pandas",
         "streamlit"
     ],
+    extras_require={
+        'notebook': [
+            'ipykernel',
+            'notebook',
+            'streamlit>=1.22.0'
+        ]
+    },
     package_data={'bdtdfinder': ['py.typed']}
 )

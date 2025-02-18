@@ -11,6 +11,7 @@ A Python library for automated research and systematic literature reviews using 
 - [Installation](#installation)
 - [Configuration: OpenRouter API](#configuration-openrouter-api)
 - [Usage](#usage)
+  - [Using the Graphical Interface](#using-the-graphical-interface)
   - [Systematic Review Example](#systematic-review-example)
 - [Output Structure](#output-structure)
 - [Core Components](#core-components)
@@ -81,6 +82,26 @@ This library uses the [OpenRouter API](https://openrouter.ai/) to generate liter
 ## Usage
 
 Before using the library, ensure that the `OPENROUTER_API_KEY` environment variable is set.
+
+### Using the Graphical Interface
+
+You have two options to run the graphical interface:
+
+1. **Command Line Interface (CLI)**
+   ```bash
+   streamlit run src/bdtdfinder/BDTDUi.py
+   ```
+
+2. **Jupyter Notebook**
+   ```python
+   import streamlit as st
+   from bdtdfinder.BDTDUi import create_ui
+   
+   # Create and display the UI in the notebook
+   create_ui()
+   ```
+
+   Note: When running in a notebook, you'll need to have `streamlit` installed and may need the `streamlit-notebook` extension for optimal display.
 
 ### Systematic Review Example
 
