@@ -367,7 +367,7 @@ class BDTDReviewer:
                 subject=self.theme,
                 max_pages_limit=self.max_pages,
                 download_pdf=self.download_pdfs,
-                output_dir=self.output_dir  # <-- Parâmetro adicionado!
+                output_dir=self.output_dir
             )
             agent.scrape_text = self.scrape_text
             agent.run()
